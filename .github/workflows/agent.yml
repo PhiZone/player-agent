@@ -4,32 +4,32 @@ on:
   workflow_dispatch:
     inputs:
       id:
-        description: 'Run ID'
+        description: "Run ID"
         required: true
       files:
-        description: 'Input files'
+        description: "Input files"
         required: true
       toggles:
-        description: 'Toggles'
+        description: "Toggles"
         required: false
         default: '{"autostart":true,"autoplay":true,"practice":false,"adjustOffset":false,"render":true,"newTab":true,"inApp":0}'
       preferences:
-        description: 'Player preferences'
+        description: "Player preferences"
         required: false
         default: '{"aspectRatio":null,"backgroundBlur":1,"backgroundLuminance":0.5,"chartFlipping":0,"chartOffset":0,"fcApIndicator":true,"goodJudgment":160,"hitSoundVolume":0.75,"lineThickness":1,"musicVolume":1,"noteSize":1,"perfectJudgment":80,"simultaneousNoteHint":true,"timeScale":1}'
       mediaOptions:
-        description: 'Renderer media options'
+        description: "Renderer media options"
         required: false
         default: '{"frameRate":60,"overrideResolution":[1620,1080],"resultsLoopsToRender":1,"videoCodec":"libx264","videoBitrate":6000,"audioBitrate":320,"vsync":true,"exportPath":""}'
       webhookUrl:
-        description: 'Webhook URL'
+        description: "Webhook URL"
         required: false
       timezone:
-        description: 'Timezone'
+        description: "Timezone"
         required: false
-        default: 'Asia/Shanghai'
+        default: "Asia/Shanghai"
       useSnapshot:
-        description: 'Use latest snapshot'
+        description: "Use latest snapshot"
         required: false
         type: boolean
         default: false
@@ -55,7 +55,7 @@ jobs:
         run: |
           set -e
 
-          run_id='${{ github.event.inputs.id }}'
+          run_id='${{ github.run_id }}'
           webhook_url='${{ github.event.inputs.webhookUrl }}'
 
           curl -X POST -H "Content-Type: application/json" -d "{
@@ -132,8 +132,9 @@ jobs:
           set -e
           files_input='${{ github.event.inputs.files }}'
 
+          run_id='${{ github.run_id }}'
           webhook_url='${{ github.event.inputs.webhookUrl }}'
-          run_id='${{ github.event.inputs.id }}'
+
           if [ -n "$webhook_url" ]; then
             curl -X POST -H "Content-Type: application/json" -d "{
               \"run_id\": \"$run_id\",
@@ -220,9 +221,9 @@ jobs:
 
       - name: Run Player executable
         env:
-          REPORT_INTERVAL: '50'
-          __XPC_JSC_useSharedArrayBuffer: '1'
-          RUN_ID: ${{ github.event.inputs.id }}
+          REPORT_INTERVAL: "50"
+          __XPC_JSC_useSharedArrayBuffer: "1"
+          RUN_ID: ${{ github.run_id }}
           WEBHOOK_URL: ${{ github.event.inputs.webhookUrl }}
         run: |
           set -e
@@ -231,8 +232,9 @@ jobs:
           preferences='${{ github.event.inputs.preferences }}'
           mediaOptions='${{ steps.prepare_options.outputs.mediaOptions }}'
 
+          run_id='${{ github.run_id }}'
           webhook_url='${{ github.event.inputs.webhookUrl }}'
-          run_id='${{ github.event.inputs.id }}'
+
           if [ -n "$webhook_url" ]; then
             curl -X POST -H "Content-Type: application/json" -d "{
               \"run_id\": \"$run_id\",
@@ -306,7 +308,7 @@ jobs:
         run: |
           set -e
 
-          run_id='${{ github.event.inputs.id }}'
+          run_id='${{ github.run_id }}'
           webhook_url='${{ github.event.inputs.webhookUrl }}'
 
           curl -X POST -H "Content-Type: application/json" -d "{
@@ -327,7 +329,7 @@ jobs:
         run: |
           set -e
 
-          run_id='${{ github.event.inputs.id }}'
+          run_id='${{ github.run_id }}'
           artifact_id='${{ steps.upload.outputs.artifact-id }}'
           webhook_url='${{ github.event.inputs.webhookUrl }}'
 
@@ -343,7 +345,7 @@ jobs:
         run: |
           set -e
 
-          run_id='${{ github.event.inputs.id }}'
+          run_id='${{ github.run_id }}'
           webhook_url='${{ github.event.inputs.webhookUrl }}'
 
           curl -X POST -H "Content-Type: application/json" -d "{
