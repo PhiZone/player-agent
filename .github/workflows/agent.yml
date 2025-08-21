@@ -141,6 +141,7 @@ jobs:
               \"status\": \"downloading_assets\",
               \"progress\": 0
             }" "$webhook_url" 2>/dev/null || echo "Failed to send download notification"
+            echo ""
           fi
 
           # Create downloads directory
@@ -170,7 +171,7 @@ jobs:
           for file in "${files_array[@]}"; do
             [ -z "$file" ] && continue
             
-            echo "Processing file: $file"
+            echo "Processing: $file"
             
             if [[ "$file" =~ ^https?:// ]]; then
               # It's a URL, download it with UUID filename
@@ -241,6 +242,7 @@ jobs:
               \"status\": \"starting\",
               \"progress\": 0
             }" "$webhook_url" 2>/dev/null || echo "Failed to send start notification"
+            echo ""
           fi
 
           # Read local file paths from the prepared list
