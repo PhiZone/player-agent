@@ -354,6 +354,20 @@ jobs:
             \"progress\": 1
           }" "$webhook_url" 2>/dev/null || echo "Failed to send failure notification"
 
+      - name: Notify webhook about job cancellation
+        if: ${{ github.event.inputs.webhookUrl && cancelled() }}
+        run: |
+          set -e
+
+          run_id='${{ github.run_id }}'
+          webhook_url='${{ github.event.inputs.webhookUrl }}'
+
+          curl -X POST -H "Content-Type: application/json" -d "{
+            \"run_id\": \"$run_id\",
+            \"status\": \"cancelled\",
+            \"progress\": 1
+          }" "$webhook_url" 2>/dev/null || echo "Failed to send cancellation notification"
+
       - name: Post-execution cleanup
         if: always()
         run: |
