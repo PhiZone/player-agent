@@ -222,7 +222,7 @@ jobs:
 
       - name: Run Player executable
         env:
-          REPORT_INTERVAL: "50"
+          REPORT_INTERVAL: "100"
           __XPC_JSC_useSharedArrayBuffer: "1"
           RUN_ID: ${{ github.run_id }}
           WEBHOOK_URL: ${{ github.event.inputs.webhookUrl }}
