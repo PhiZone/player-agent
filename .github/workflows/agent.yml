@@ -170,16 +170,16 @@ jobs:
 
           for file in "${files_array[@]}"; do
             [ -z "$file" ] && continue
-            
+
             echo "Processing: $file"
-            
+
             if [[ "$file" =~ ^https?:// ]]; then
               # It's a URL, download it with UUID filename
-              
+
               # Extract extension from URL (remove query parameters first)
               clean_url="${file%%\?*}"
               extension=""
-              
+
               # Try to get extension from the clean URL
               if [[ "$clean_url" =~ \.[a-zA-Z0-9]+$ ]]; then
                 extension="${clean_url##*.}"
@@ -187,14 +187,14 @@ jobs:
                 # Default to zip if no extension found
                 extension="zip"
               fi
-              
+
               # Generate UUID for filename (using timestamp + random for uniqueness)
               uuid=$(date +%s%N | shasum | head -c 8)
               filename="${uuid}.${extension}"
-              
+
               local_path="$downloads_path/$filename"
               echo "Downloading $file to $local_path"
-              
+
               if curl -L -f -o "$local_path" "$file"; then
                 echo "Successfully downloaded: $filename"
                 local_files+=("$local_path")
@@ -207,7 +207,7 @@ jobs:
               echo "Using local file: $file"
               local_files+=("$file")
             fi
-            
+
             ((file_counter++))
           done
 
