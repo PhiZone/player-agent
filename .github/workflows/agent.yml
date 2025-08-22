@@ -189,7 +189,7 @@ jobs:
               fi
               
               # Generate UUID for filename (using timestamp + random for uniqueness)
-              uuid=$(date +%s%N | sha256sum | head -c 8)
+              uuid=$(date +%s%N | shasum | head -c 8)
               filename="${uuid}.${extension}"
               
               local_path="$downloads_path/$filename"
