@@ -1,10 +1,13 @@
 name: Agent
-run-name: Run PhiZone Player [${{ github.event.inputs.id }}]
+run-name: PZPA [${{ github.event.inputs.id }}] [${{ github.event.inputs.objectId }}]
 on:
   workflow_dispatch:
     inputs:
       id:
         description: "Run ID"
+        required: true
+      objectId:
+        description: "Object ID of the run"
         required: true
       files:
         description: "Input files"
