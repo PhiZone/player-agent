@@ -36,6 +36,12 @@ on:
         required: false
         type: boolean
         default: false
+      title:
+        description: "Title"
+        required: false
+      level:
+        description: "Level"
+        required: false
 
 defaults:
   run:
@@ -237,6 +243,8 @@ jobs:
           toggles='${{ github.event.inputs.toggles }}'
           preferences='${{ github.event.inputs.preferences }}'
           mediaOptions='${{ steps.prepare_options.outputs.mediaOptions }}'
+          title='${{ github.event.inputs.title }}'
+          level='${{ github.event.inputs.level }}'
 
           run_id='${{ github.run_id }}'
           webhook_url='${{ github.event.inputs.webhookUrl }}'
@@ -274,6 +282,12 @@ jobs:
           fi
           if [ -n "$mediaOptions" ]; then
             cmd_args+=("--mediaOptions" "$mediaOptions")
+          fi
+          if [ -n "$title" ]; then
+            cmd_args+=("--title" "$title")
+          fi
+          if [ -n "$level" ]; then
+            cmd_args+=("--level" "$level")
           fi
 
           cmd_args+=("--automate")
