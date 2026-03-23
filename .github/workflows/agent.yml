@@ -61,11 +61,14 @@ jobs:
 
       - name: Notify webhook about job initialization
         if: ${{ github.event.inputs.webhookUrl }}
+        env:
+          RUN_ID: ${{ github.run_id }}
+          WEBHOOK_URL: ${{ github.event.inputs.webhookUrl }}
         run: |
           set -e
 
-          run_id='${{ github.run_id }}'
-          webhook_url='${{ github.event.inputs.webhookUrl }}'
+          run_id="$RUN_ID"
+          webhook_url="$WEBHOOK_URL"
 
           curl -X POST -H "Content-Type: application/json" -d "{
             \"run_id\": \"$run_id\",
@@ -122,13 +125,15 @@ jobs:
 
       - name: Prepare media options
         id: prepare_options
+        env:
+          MEDIA_OPTIONS_INPUT: ${{ github.event.inputs.mediaOptions }}
         run: |
           set -e
           mkdir -p ./outputs
           outputs_path=$(realpath ./outputs)
           echo "outputs_path=$outputs_path" >> $GITHUB_OUTPUT
 
-          mediaOptions='${{ github.event.inputs.mediaOptions }}'
+          mediaOptions="$MEDIA_OPTIONS_INPUT"
           if [ -n "$mediaOptions" ]; then
             # Parse JSON, override exportPath, and serialize back (compact output)
             mediaOptions=$(echo "$mediaOptions" | jq -c --arg path "$outputs_path" '. + {exportPath: $path}')
@@ -139,6 +144,10 @@ jobs:
 
       - name: Download and prepare input files
         id: prepare_files
+        env:
+          FILES_INPUT: ${{ github.event.inputs.files }}
+          RUN_ID: ${{ github.run_id }}
+          WEBHOOK_URL: ${{ github.event.inputs.webhookUrl }}
         run: |
           set -e
 
@@ -171,10 +180,10 @@ jobs:
             done
           }
 
-          files_input='${{ github.event.inputs.files }}'
+          files_input="$FILES_INPUT"
 
-          run_id='${{ github.run_id }}'
-          webhook_url='${{ github.event.inputs.webhookUrl }}'
+          run_id="$RUN_ID"
+          webhook_url="$WEBHOOK_URL"
 
           if [ -n "$webhook_url" ]; then
             curl -X POST -H "Content-Type: application/json" -d "{
@@ -267,17 +276,23 @@ jobs:
           __XPC_JSC_useSharedArrayBuffer: "1"
           RUN_ID: ${{ github.run_id }}
           WEBHOOK_URL: ${{ github.event.inputs.webhookUrl }}
+          LOCAL_FILES_PATH: ${{ steps.prepare_files.outputs.local_files_path }}
+          TOGGLES: ${{ github.event.inputs.toggles }}
+          PREFERENCES: ${{ github.event.inputs.preferences }}
+          MEDIA_OPTIONS: ${{ steps.prepare_options.outputs.mediaOptions }}
+          TITLE: ${{ github.event.inputs.title }}
+          LEVEL: ${{ github.event.inputs.level }}
         run: |
           set -e
-          local_files_path='${{ steps.prepare_files.outputs.local_files_path }}'
-          toggles='${{ github.event.inputs.toggles }}'
-          preferences='${{ github.event.inputs.preferences }}'
-          mediaOptions='${{ steps.prepare_options.outputs.mediaOptions }}'
-          title='${{ github.event.inputs.title }}'
-          level='${{ github.event.inputs.level }}'
+          local_files_path="$LOCAL_FILES_PATH"
+          toggles="$TOGGLES"
+          preferences="$PREFERENCES"
+          mediaOptions="$MEDIA_OPTIONS"
+          title="$TITLE"
+          level="$LEVEL"
 
-          run_id='${{ github.run_id }}'
-          webhook_url='${{ github.event.inputs.webhookUrl }}'
+          run_id="$RUN_ID"
+          webhook_url="$WEBHOOK_URL"
 
           if [ -n "$webhook_url" ]; then
             curl -X POST -H "Content-Type: application/json" -d "{
@@ -356,11 +371,14 @@ jobs:
 
       - name: Notify webhook about artifact upload
         if: ${{ github.event.inputs.webhookUrl }}
+        env:
+          RUN_ID: ${{ github.run_id }}
+          WEBHOOK_URL: ${{ github.event.inputs.webhookUrl }}
         run: |
           set -e
 
-          run_id='${{ github.run_id }}'
-          webhook_url='${{ github.event.inputs.webhookUrl }}'
+          run_id="$RUN_ID"
+          webhook_url="$WEBHOOK_URL"
 
           curl -X POST -H "Content-Type: application/json" -d "{
             \"run_id\": \"$run_id\",
@@ -377,12 +395,16 @@ jobs:
 
       - name: Notify webhook about job completion
         if: ${{ github.event.inputs.webhookUrl }}
+        env:
+          RUN_ID: ${{ github.run_id }}
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          WEBHOOK_URL: ${{ github.event.inputs.webhookUrl }}
         run: |
           set -e
 
-          run_id='${{ github.run_id }}'
-          artifact_id='${{ steps.upload.outputs.artifact-id }}'
-          webhook_url='${{ github.event.inputs.webhookUrl }}'
+          run_id="$RUN_ID"
+          artifact_id="$ARTIFACT_ID"
+          webhook_url="$WEBHOOK_URL"
 
           curl -X POST -H "Content-Type: application/json" -d "{
             \"run_id\": \"$run_id\",
@@ -393,11 +415,14 @@ jobs:
 
       - name: Notify webhook about job failure
         if: ${{ github.event.inputs.webhookUrl && failure() }}
+        env:
+          RUN_ID: ${{ github.run_id }}
+          WEBHOOK_URL: ${{ github.event.inputs.webhookUrl }}
         run: |
           set -e
 
-          run_id='${{ github.run_id }}'
-          webhook_url='${{ github.event.inputs.webhookUrl }}'
+          run_id="$RUN_ID"
+          webhook_url="$WEBHOOK_URL"
 
           curl -X POST -H "Content-Type: application/json" -d "{
             \"run_id\": \"$run_id\",
@@ -407,11 +432,14 @@ jobs:
 
       - name: Notify webhook about job cancellation
         if: ${{ github.event.inputs.webhookUrl && cancelled() }}
+        env:
+          RUN_ID: ${{ github.run_id }}
+          WEBHOOK_URL: ${{ github.event.inputs.webhookUrl }}
         run: |
           set -e
 
-          run_id='${{ github.run_id }}'
-          webhook_url='${{ github.event.inputs.webhookUrl }}'
+          run_id="$RUN_ID"
+          webhook_url="$WEBHOOK_URL"
 
           curl -X POST -H "Content-Type: application/json" -d "{
             \"run_id\": \"$run_id\",
