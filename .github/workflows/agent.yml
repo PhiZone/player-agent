@@ -141,6 +141,36 @@ jobs:
         id: prepare_files
         run: |
           set -e
+
+          retry_curl() {
+            local out_path="$1"
+            local url="$2"
+            local max_retries=10
+            local attempt=1
+
+            while [ "$attempt" -le "$max_retries" ]; do
+              if curl -L -f --connect-timeout 15 --max-time 300 -o "$out_path" "$url"; then
+                return 0
+              fi
+
+              exit_code=$?
+              echo "curl failed (exit $exit_code) attempt ${attempt}/${max_retries}: $url" >&2
+
+              if [ "$attempt" -ge "$max_retries" ]; then
+                return "$exit_code"
+              fi
+
+              sleep_time=$(( attempt * 2 ))
+              if [ "$sleep_time" -gt 20 ]; then
+                sleep_time=20
+              fi
+
+              echo "Retrying in ${sleep_time}s..." >&2
+              sleep "$sleep_time"
+              attempt=$(( attempt + 1 ))
+            done
+          }
+
           files_input='${{ github.event.inputs.files }}'
 
           run_id='${{ github.run_id }}'
@@ -206,7 +236,7 @@ jobs:
               local_path="$downloads_path/$filename"
               echo "Downloading $file to $local_path"
 
-              if curl -L -f -o "$local_path" "$file"; then
+              if retry_curl "$local_path" "$file"; then
                 echo "Successfully downloaded: $filename"
                 local_files+=("$local_path")
               else
