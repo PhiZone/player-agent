@@ -24,6 +24,10 @@ on:
         description: "Renderer media options"
         required: false
         default: '{"frameRate":60,"overrideResolution":[1620,1080],"resultsLoopsToRender":1,"videoCodec":"libx264","videoBitrate":6000,"audioBitrate":320,"vsync":true,"exportPath":""}'
+      renderBackend:
+        description: "Rendering backend mode"
+        required: false
+        default: "native"
       webhookUrl:
         description: "Webhook URL"
         required: false
@@ -50,7 +54,7 @@ defaults:
 jobs:
   agent:
     name: Run PhiZone Player
-    runs-on: macos-latest
+    runs-on: ${{ github.event.inputs.renderBackend == 'browser-tauri-ws-windows' && 'windows-latest' || 'macos-latest' }}
     steps:
       - name: Set timezone
         uses: szenius/set-timezone@v2.0
@@ -82,10 +86,12 @@ jobs:
         with:
           script: |
             const useSnapshot = '${{ github.event.inputs.useSnapshot }}' === 'true';
+            const isWindows = '${{ github.event.inputs.renderBackend }}' === 'browser-tauri-ws-windows';
+            const suffix = isWindows ? '-windows-x64.exe' : '-macos-arm64';
 
             let release;
             if (useSnapshot) {
-              // Get latest prerelease with macOS ARM64 executable asset
+              // Get latest prerelease with required executable asset
               const { data: releases } = await github.rest.repos.listReleases({
                 owner: 'PhiZone',
                 repo: 'player',
@@ -93,9 +99,9 @@ jobs:
               });
               release = releases.find(r =>
                 r.prerelease &&
-                r.assets.some(a => a.name.endsWith('-macos-arm64'))
+                r.assets.some(a => a.name.endsWith(suffix))
               );
-              if (!release) throw new Error('No prerelease with macOS ARM64 executable asset found');
+              if (!release) throw new Error(`No prerelease with asset suffix ${suffix} found`);
             } else {
               // Get latest stable release
               const { data: latestRelease } = await github.rest.repos.getLatestRelease({
@@ -107,16 +113,22 @@ jobs:
 
             const tag = release.tag_name;
             const version = tag.replace(/^v/, '');
-            const assetName = `PhiZone.Player-${version}-macos-arm64`;
+            const preferredAssetName = `PhiZone.Player-${version}${suffix}`;
 
-            const asset = release.assets.find(a => a.name === assetName);
-            if (!asset) throw new Error(`Asset ${assetName} not found`);
+            const asset =
+              release.assets.find(a => a.name === preferredAssetName) ||
+              release.assets.find(a => a.name.endsWith(suffix));
+            if (!asset) throw new Error(`Asset with suffix ${suffix} not found`);
             core.setOutput('asset_url', asset.browser_download_url);
+            core.setOutput('executable_name', isWindows ? 'player.exe' : 'player');
 
       - name: Download Player executable
         run: |
-          curl -L "${{ steps.get_url.outputs.asset_url }}" -o player
-          chmod +x player
+          executable_name="${{ steps.get_url.outputs.executable_name }}"
+          curl -L "${{ steps.get_url.outputs.asset_url }}" -o "$executable_name"
+          if [ "$executable_name" = "player" ]; then
+            chmod +x "$executable_name"
+          fi
 
       - name: Setup FFmpeg
         uses: AnimMouse/setup-ffmpeg@v1
@@ -274,6 +286,8 @@ jobs:
         env:
           REPORT_INTERVAL: "100"
           __XPC_JSC_useSharedArrayBuffer: "1"
+          RENDER_BACKEND: ${{ github.event.inputs.renderBackend }}
+          PLAYER_EXECUTABLE: ${{ steps.get_url.outputs.executable_name }}
           RUN_ID: ${{ github.run_id }}
           WEBHOOK_URL: ${{ github.event.inputs.webhookUrl }}
           LOCAL_FILES_PATH: ${{ steps.prepare_files.outputs.local_files_path }}
@@ -337,33 +351,40 @@ jobs:
 
           cmd_args+=("--automate")
 
-          # Start memory monitoring in background
-          (
-            while true; do
-              # Memory usage (macOS: vm_stat and sysctl)
-              mem_total=$(sysctl -n hw.memsize)
-              mem_free=$(vm_stat | awk '/Pages free/ {print $3}' | tr -d '.')
-              mem_inactive=$(vm_stat | awk '/Pages inactive/ {print $3}' | tr -d '.')
-              page_size=$(vm_stat | head -1 | awk '{print $8}')
-              mem_free_bytes=$(( (mem_free + mem_inactive) * page_size ))
-              mem_occupied_bytes=$((mem_total - mem_free_bytes))
-              mem_total_gb=$(echo "scale=2; $mem_total/1024/1024/1024" | bc)
-              mem_occupied_gb=$(echo "scale=2; $mem_occupied_bytes/1024/1024/1024" | bc)
-              mem_percent=$(echo "scale=1; ($mem_occupied_bytes*100)/$mem_total" | bc)
-              echo -e "\nMemory: ${mem_occupied_gb} GiB / ${mem_total_gb} GiB (${mem_percent}%)"
-              sleep 60
-            done
-          ) &
-          memory_monitor_pid=$!
+          memory_monitor_pid=""
+          # Start memory monitoring in background on macOS only.
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            (
+              while true; do
+                # Memory usage (macOS: vm_stat and sysctl)
+                mem_total=$(sysctl -n hw.memsize)
+                mem_free=$(vm_stat | awk '/Pages free/ {print $3}' | tr -d '.')
+                mem_inactive=$(vm_stat | awk '/Pages inactive/ {print $3}' | tr -d '.')
+                page_size=$(vm_stat | head -1 | awk '{print $8}')
+                mem_free_bytes=$(( (mem_free + mem_inactive) * page_size ))
+                mem_occupied_bytes=$((mem_total - mem_free_bytes))
+                mem_total_gb=$(echo "scale=2; $mem_total/1024/1024/1024" | bc)
+                mem_occupied_gb=$(echo "scale=2; $mem_occupied_bytes/1024/1024/1024" | bc)
+                mem_percent=$(echo "scale=1; ($mem_occupied_bytes*100)/$mem_total" | bc)
+                echo -e "\nMemory: ${mem_occupied_gb} GiB / ${mem_total_gb} GiB (${mem_percent}%)"
+                sleep 60
+              done
+            ) &
+            memory_monitor_pid=$!
+          fi
 
           # Execute Player
-          echo "Executing: ./player ${cmd_args[*]}"
-          ./player "${cmd_args[@]}"
+          player_executable="${PLAYER_EXECUTABLE:-player}"
+          echo "Selected render backend: ${RENDER_BACKEND:-native}"
+          echo "Executing: ./$player_executable ${cmd_args[*]}"
+          ./$player_executable "${cmd_args[@]}"
           player_exit_code=$?
 
           # Stop monitoring processes
-          kill $memory_monitor_pid 2>/dev/null || true
-          wait $memory_monitor_pid 2>/dev/null || true
+          if [ -n "$memory_monitor_pid" ]; then
+            kill $memory_monitor_pid 2>/dev/null || true
+            wait $memory_monitor_pid 2>/dev/null || true
+          fi
 
           echo "Player execution completed with exit code: $player_exit_code"
 
@@ -463,7 +484,7 @@ jobs:
           rm -rf ./files.txt 2>/dev/null || true
 
           # Clean up Player executable
-          rm -f ./player 2>/dev/null || true
+          rm -f ./player ./player.exe 2>/dev/null || true
 
           # Clean up Tauri app data
           if [ -d "$APPDATA" ]; then
