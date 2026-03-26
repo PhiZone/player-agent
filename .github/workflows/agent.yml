@@ -298,6 +298,7 @@ jobs:
         run: |
           mkdir -p ./screenshots
           (
+            sleep 30
             for i in $(seq 1 10); do
               screencapture -x "./screenshots/screenshot_$(printf '%02d' $i)_$(date +%H%M%S).png" 2>/dev/null || true
               sleep 30
