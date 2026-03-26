@@ -36,6 +36,11 @@ on:
         required: false
         type: boolean
         default: false
+      useBrowser:
+        description: "Use browser"
+        required: false
+        type: boolean
+        default: true
       title:
         description: "Title"
         required: false
@@ -280,6 +285,7 @@ jobs:
           TOGGLES: ${{ github.event.inputs.toggles }}
           PREFERENCES: ${{ github.event.inputs.preferences }}
           MEDIA_OPTIONS: ${{ steps.prepare_options.outputs.mediaOptions }}
+          USE_BROWSER: ${{ github.event.inputs.useBrowser }}
           TITLE: ${{ github.event.inputs.title }}
           LEVEL: ${{ github.event.inputs.level }}
         run: |
@@ -288,6 +294,7 @@ jobs:
           toggles="$TOGGLES"
           preferences="$PREFERENCES"
           mediaOptions="$MEDIA_OPTIONS"
+          useBrowser="$USE_BROWSER"
           title="$TITLE"
           level="$LEVEL"
 
@@ -327,6 +334,9 @@ jobs:
           fi
           if [ -n "$mediaOptions" ]; then
             cmd_args+=("--mediaOptions" "$mediaOptions")
+          fi
+          if [ "$useBrowser" = "true" ]; then
+            cmd_args+=("--browser" 'open -a "Google Chrome"' "--url" "https://player.phi.zone/")
           fi
           if [ -n "$title" ]; then
             cmd_args+=("--title" "$title")
