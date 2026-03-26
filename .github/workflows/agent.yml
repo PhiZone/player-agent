@@ -336,7 +336,7 @@ jobs:
             cmd_args+=("--mediaOptions" "$mediaOptions")
           fi
           if [ "$useBrowser" = "true" ]; then
-            cmd_args+=("--browser" 'open -a "Google Chrome"' "--url" "https://player.phi.zone/")
+            cmd_args+=("--browser" 'open -a "Microsoft Edge"' "--url" "https://player.phi.zone/")
           fi
           if [ -n "$title" ]; then
             cmd_args+=("--title" "$title")
