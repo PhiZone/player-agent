@@ -294,7 +294,36 @@ jobs:
 
           echo "Browser preparation completed."
 
-          # Auto-dismiss macOS local network permission dialogs in the background
+          # Pre-grant TCC permissions so the local network dialog never appears.
+          # kTCCServiceLocalNetwork → player binary (client_type 1 = absolute path)
+          # kTCCServiceAccessibility → System Events (client_type 0 = bundle ID)
+          # auth_value 2 = allow, auth_reason 4 = user-set
+          PLAYER_REALPATH="$(realpath ./player)"
+          TIMESTAMP="$(date +%s)"
+          TCC_SQL_LOCAL_NETWORK="INSERT OR REPLACE INTO access \
+            (service, client, client_type, auth_value, auth_reason, auth_version, last_modified) \
+            VALUES ('kTCCServiceLocalNetwork', '${PLAYER_REALPATH}', 1, 2, 4, 1, ${TIMESTAMP});"
+          TCC_SQL_ACCESSIBILITY="INSERT OR REPLACE INTO access \
+            (service, client, client_type, auth_value, auth_reason, auth_version, last_modified) \
+            VALUES ('kTCCServiceAccessibility', 'com.apple.systemevents', 0, 2, 4, 1, ${TIMESTAMP});"
+
+          # System TCC db (requires sudo — grants apply to all users)
+          TCC_SYSTEM="/Library/Application Support/com.apple.TCC/TCC.db"
+          sudo sqlite3 "$TCC_SYSTEM" "$TCC_SQL_LOCAL_NETWORK" 2>/dev/null && echo "Granted LocalNetwork (system TCC)" || echo "Could not modify system TCC"
+          sudo sqlite3 "$TCC_SYSTEM" "$TCC_SQL_ACCESSIBILITY"  2>/dev/null && echo "Granted Accessibility (system TCC)" || echo "Could not modify system TCC"
+
+          # User TCC db (fallback)
+          TCC_USER="$HOME/Library/Application Support/com.apple.TCC/TCC.db"
+          if [ -f "$TCC_USER" ]; then
+            sqlite3 "$TCC_USER" "$TCC_SQL_LOCAL_NETWORK" 2>/dev/null && echo "Granted LocalNetwork (user TCC)"   || echo "Could not modify user TCC"
+            sqlite3 "$TCC_USER" "$TCC_SQL_ACCESSIBILITY"  2>/dev/null && echo "Granted Accessibility (user TCC)"   || echo "Could not modify user TCC"
+          fi
+
+          # Signal tccd to reload its cache
+          sudo killall -HUP tccd 2>/dev/null || true
+          sleep 2
+
+          # Osascript fallback: auto-dismiss any remaining Allow dialogs in the background
           (
             while true; do
               osascript \
