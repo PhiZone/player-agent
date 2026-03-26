@@ -294,6 +294,18 @@ jobs:
 
           echo "Browser preparation completed."
 
+      - name: Start debug screenshot capture
+        run: |
+          mkdir -p ./screenshots
+          (
+            for i in $(seq 1 10); do
+              screencapture -x "./screenshots/screenshot_$(printf '%02d' $i)_$(date +%H%M%S).png" 2>/dev/null || true
+              sleep 30
+            done
+          ) &
+          echo $! > ./screenshot_pid
+          echo "Debug screenshot capture started (PID: $!), capturing every 30s for 5 minutes"
+
       - name: Run Player executable
         env:
           REPORT_INTERVAL: "100"
@@ -398,6 +410,14 @@ jobs:
           echo "Player execution completed with exit code: $player_exit_code"
 
           exit $player_exit_code
+
+      - name: Upload debug screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshots
+          path: ./screenshots
+          if-no-files-found: ignore
 
       - name: Notify webhook about artifact upload
         if: ${{ github.event.inputs.webhookUrl }}
