@@ -282,6 +282,17 @@ jobs:
         with:
           chrome-version: stable
 
+      - name: Create Chrome wrapper script
+        if: ${{ github.event.inputs.useBrowser == 'true' }}
+        env:
+          CHROME_PATH: ${{ steps.setup_chrome.outputs.chrome-path }}
+        run: |
+          cat > ./chrome-wrapper <<EOF
+          #!/bin/bash
+          exec "$CHROME_PATH" "\$@"
+          EOF
+          chmod +x ./chrome-wrapper
+
       - name: Run Player executable
         env:
           REPORT_INTERVAL: "100"
@@ -293,7 +304,6 @@ jobs:
           PREFERENCES: ${{ github.event.inputs.preferences }}
           MEDIA_OPTIONS: ${{ steps.prepare_options.outputs.mediaOptions }}
           USE_BROWSER: ${{ github.event.inputs.useBrowser }}
-          CHROME_PATH: ${{ steps.setup_chrome.outputs.chrome-path }}
           TITLE: ${{ github.event.inputs.title }}
           LEVEL: ${{ github.event.inputs.level }}
         run: |
@@ -303,7 +313,6 @@ jobs:
           preferences="$PREFERENCES"
           mediaOptions="$MEDIA_OPTIONS"
           useBrowser="$USE_BROWSER"
-          chromePath="$CHROME_PATH"
           title="$TITLE"
           level="$LEVEL"
 
@@ -345,7 +354,8 @@ jobs:
             cmd_args+=("--mediaOptions" "$mediaOptions")
           fi
           if [ "$useBrowser" = "true" ]; then
-            cmd_args+=("--browser" "$chromePath --no-first-run --no-default-browser-check --disable-search-engine-choice-screen" "--url" "https://player.phi.zone/")
+            chrome_wrapper=$(realpath ./chrome-wrapper)
+            cmd_args+=("--browser" "$chrome_wrapper --no-first-run --no-default-browser-check --disable-search-engine-choice-screen" "--url" "https://player.phi.zone/")
           fi
           if [ -n "$title" ]; then
             cmd_args+=("--title" "$title")
