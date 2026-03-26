@@ -275,6 +275,28 @@ jobs:
             echo "  - $file"
           done
 
+      - name: Prepare browser for CI
+        if: ${{ github.event.inputs.useBrowser == 'true' }}
+        run: |
+          set -e
+
+          # Remove quarantine attributes to prevent Gatekeeper prompts
+          if [ -d "/Applications/Google Chrome.app" ]; then
+            sudo xattr -rd com.apple.quarantine "/Applications/Google Chrome.app" 2>/dev/null || true
+          fi
+          if [ -d "/Applications/Microsoft Edge.app" ]; then
+            sudo xattr -rd com.apple.quarantine "/Applications/Microsoft Edge.app" 2>/dev/null || true
+          fi
+
+          # Create First Run sentinel files to skip first-run dialogs
+          mkdir -p "$HOME/Library/Application Support/Google/Chrome"
+          touch "$HOME/Library/Application Support/Google/Chrome/First Run"
+
+          mkdir -p "$HOME/Library/Application Support/Microsoft Edge"
+          touch "$HOME/Library/Application Support/Microsoft Edge/First Run"
+
+          echo "Browser preparation completed."
+
       - name: Run Player executable
         env:
           REPORT_INTERVAL: "100"
@@ -336,7 +358,7 @@ jobs:
             cmd_args+=("--mediaOptions" "$mediaOptions")
           fi
           if [ "$useBrowser" = "true" ]; then
-            cmd_args+=("--browser" 'open -a "Microsoft Edge"' "--url" "https://player.phi.zone/")
+            cmd_args+=("--browser" 'open -a "Google Chrome" --args --no-first-run --no-default-browser-check --disable-search-engine-choice-screen' "--url" "https://player.phi.zone/")
           fi
           if [ -n "$title" ]; then
             cmd_args+=("--title" "$title")
