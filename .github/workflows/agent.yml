@@ -369,7 +369,7 @@ jobs:
           fi
           if [ "$useBrowser" = "true" ]; then
             chrome_wrapper=$(realpath ./chrome-wrapper)
-            cmd_args+=("--browser" "$chrome_wrapper --no-sandbox --no-first-run --no-default-browser-check --disable-search-engine-choice-screen" "--url" "https://player.phi.zone/")
+            cmd_args+=("--browser" "$chrome_wrapper --no-first-run --no-default-browser-check --disable-search-engine-choice-screen" "--url" "https://player.phi.zone/")
           fi
           if [ -n "$title" ]; then
             cmd_args+=("--title" "$title")
