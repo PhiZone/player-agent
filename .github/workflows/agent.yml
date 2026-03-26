@@ -275,27 +275,12 @@ jobs:
             echo "  - $file"
           done
 
-      - name: Prepare browser for CI
+      - name: Setup Chrome
         if: ${{ github.event.inputs.useBrowser == 'true' }}
-        run: |
-          set -e
-
-          # Remove quarantine attributes to prevent Gatekeeper prompts
-          if [ -d "/Applications/Google Chrome.app" ]; then
-            sudo xattr -rd com.apple.quarantine "/Applications/Google Chrome.app" 2>/dev/null || true
-          fi
-          if [ -d "/Applications/Microsoft Edge.app" ]; then
-            sudo xattr -rd com.apple.quarantine "/Applications/Microsoft Edge.app" 2>/dev/null || true
-          fi
-
-          # Create First Run sentinel files to skip first-run dialogs
-          mkdir -p "$HOME/Library/Application Support/Google/Chrome"
-          touch "$HOME/Library/Application Support/Google/Chrome/First Run"
-
-          mkdir -p "$HOME/Library/Application Support/Microsoft Edge"
-          touch "$HOME/Library/Application Support/Microsoft Edge/First Run"
-
-          echo "Browser preparation completed."
+        id: setup_chrome
+        uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
 
       - name: Run Player executable
         env:
@@ -308,6 +293,7 @@ jobs:
           PREFERENCES: ${{ github.event.inputs.preferences }}
           MEDIA_OPTIONS: ${{ steps.prepare_options.outputs.mediaOptions }}
           USE_BROWSER: ${{ github.event.inputs.useBrowser }}
+          CHROME_PATH: ${{ steps.setup_chrome.outputs.chrome-path }}
           TITLE: ${{ github.event.inputs.title }}
           LEVEL: ${{ github.event.inputs.level }}
         run: |
@@ -317,6 +303,7 @@ jobs:
           preferences="$PREFERENCES"
           mediaOptions="$MEDIA_OPTIONS"
           useBrowser="$USE_BROWSER"
+          chromePath="$CHROME_PATH"
           title="$TITLE"
           level="$LEVEL"
 
@@ -358,7 +345,7 @@ jobs:
             cmd_args+=("--mediaOptions" "$mediaOptions")
           fi
           if [ "$useBrowser" = "true" ]; then
-            cmd_args+=("--browser" 'open -a "Google Chrome" --args --no-first-run --no-default-browser-check --disable-search-engine-choice-screen' "--url" "https://player.phi.zone/")
+            cmd_args+=("--browser" "$chromePath --no-first-run --no-default-browser-check --disable-search-engine-choice-screen" "--url" "https://player.phi.zone/")
           fi
           if [ -n "$title" ]; then
             cmd_args+=("--title" "$title")
