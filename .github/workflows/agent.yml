@@ -275,23 +275,24 @@ jobs:
             echo "  - $file"
           done
 
-      - name: Setup Chrome
+      - name: Prepare browser for CI
         if: ${{ github.event.inputs.useBrowser == 'true' }}
-        id: setup_chrome
-        uses: browser-actions/setup-chrome@v2
-        with:
-          chrome-version: stable
-
-      - name: Create Chrome wrapper script
-        if: ${{ github.event.inputs.useBrowser == 'true' }}
-        env:
-          CHROME_PATH: ${{ steps.setup_chrome.outputs.chrome-path }}
         run: |
-          cat > ./chrome-wrapper <<EOF
+          set -e
+
+          # Create First Run sentinel file to suppress first-run dialog
+          mkdir -p "$HOME/Library/Application Support/Google/Chrome"
+          touch "$HOME/Library/Application Support/Google/Chrome/First Run"
+
+          # Create a wrapper script to invoke the preinstalled Chrome binary directly
+          # (bypasses macOS `open` and avoids spaces-in-path issues)
+          cat > ./chrome-wrapper <<'WRAPPER'
           #!/bin/bash
-          exec "$CHROME_PATH" "\$@"
-          EOF
+          exec "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" "$@"
+          WRAPPER
           chmod +x ./chrome-wrapper
+
+          echo "Browser preparation completed."
 
       - name: Run Player executable
         env:
