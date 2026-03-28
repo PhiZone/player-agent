@@ -40,7 +40,7 @@ on:
         description: "Use browser"
         required: false
         type: boolean
-        default: true
+        default: false
       title:
         description: "Title"
         required: false
