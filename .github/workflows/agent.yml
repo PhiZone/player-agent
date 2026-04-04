@@ -121,6 +121,14 @@ jobs:
             if (!asset) throw new Error(`Asset ${assetName} not found`);
             core.setOutput('asset_url', asset.browser_download_url);
 
+            const webZipName = `PhiZone.Player_${version}.zip`;
+            const webZipAsset = release.assets.find(a => a.name === webZipName);
+            if (webZipAsset) {
+              core.setOutput('web_zip_url', webZipAsset.browser_download_url);
+            } else {
+              core.warning(`Web build ZIP ${webZipName} not found in release`);
+            }
+
       - name: Download Player executable
         run: |
           curl -L "${{ steps.get_url.outputs.asset_url }}" -o player
@@ -303,27 +311,21 @@ jobs:
         with:
           node-version: 22
 
-      - name: Setup PNPM
-        if: ${{ github.event.inputs.useBrowser == 'true' }}
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Clone and build Player web app
-        if: ${{ github.event.inputs.useBrowser == 'true' }}
+      - name: Download and extract Player web build
+        if: ${{ github.event.inputs.useBrowser == 'true' && steps.get_url.outputs.web_zip_url }}
         run: |
           set -e
-          git clone --depth 1 https://github.com/PhiZone/player.git player-app
-          cd player-app
-          pnpm install --frozen-lockfile
-          pnpm build:only
-          echo "Player web app built successfully."
+          curl -L "${{ steps.get_url.outputs.web_zip_url }}" -o player-web.zip
+          mkdir -p ./player-web
+          unzip -q player-web.zip -d ./player-web
+          rm player-web.zip
+          echo "Player web build extracted successfully."
 
       - name: Start local web server
-        if: ${{ github.event.inputs.useBrowser == 'true' }}
+        if: ${{ github.event.inputs.useBrowser == 'true' && steps.get_url.outputs.web_zip_url }}
         run: |
           set -e
-          node serve.mjs ./player-app/build 3000 &
+          node serve.mjs ./player-web 3000 &
           echo $! > ./server_pid
           # Wait for server to be ready
           for i in $(seq 1 30); do
@@ -550,8 +552,8 @@ jobs:
             rm -f ./server_pid
           fi
 
-          # Clean up cloned Player web app
-          rm -rf ./player-app 2>/dev/null || true
+          # Clean up Player web build
+          rm -rf ./player-web 2>/dev/null || true
 
           # Clean up downloaded files
           echo "Cleaning downloaded files..."
