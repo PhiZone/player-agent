@@ -81,6 +81,9 @@ jobs:
             \"progress\": 0
           }" "$webhook_url" 2>/dev/null || echo "Failed to send initialization notification"
 
+      - name: Checkout current repository
+        uses: actions/checkout@v6
+
       - name: Obtain Player executable download URL
         id: get_url
         uses: actions/github-script@v7
