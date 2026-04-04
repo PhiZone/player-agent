@@ -294,6 +294,43 @@ jobs:
 
           echo "Browser preparation completed."
 
+      - name: Setup Node.js
+        if: ${{ github.event.inputs.useBrowser == 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup PNPM
+        if: ${{ github.event.inputs.useBrowser == 'true' }}
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Clone and build Player web app
+        if: ${{ github.event.inputs.useBrowser == 'true' }}
+        run: |
+          set -e
+          git clone --depth 1 https://github.com/PhiZone/player.git player-app
+          cd player-app
+          pnpm install --frozen-lockfile
+          pnpm build:only
+          echo "Player web app built successfully."
+
+      - name: Start local web server
+        if: ${{ github.event.inputs.useBrowser == 'true' }}
+        run: |
+          set -e
+          node serve.mjs ./player-app/build 3000 &
+          echo $! > ./server_pid
+          # Wait for server to be ready
+          for i in $(seq 1 30); do
+            if curl -s -o /dev/null http://localhost:3000/; then
+              echo "Local web server is ready on http://localhost:3000"
+              break
+            fi
+            sleep 1
+          done
+
       - name: Start debug screenshot capture
         run: |
           mkdir -p ./screenshots
@@ -369,7 +406,7 @@ jobs:
           fi
           if [ "$useBrowser" = "true" ]; then
             chrome_wrapper=$(realpath ./chrome-wrapper)
-            cmd_args+=("--browser" "$chrome_wrapper --no-first-run --no-default-browser-check --disable-search-engine-choice-screen" "--url" "https://player.phi.zone/")
+            cmd_args+=("--browser" "$chrome_wrapper --no-first-run --no-default-browser-check --disable-search-engine-choice-screen" "--url" "http://localhost:3000/")
           fi
           if [ -n "$title" ]; then
             cmd_args+=("--title" "$title")
@@ -503,6 +540,15 @@ jobs:
         run: |
           set -e
           echo "Starting post-execution cleanup..."
+
+          # Stop local web server
+          if [ -f ./server_pid ]; then
+            kill $(cat ./server_pid) 2>/dev/null || true
+            rm -f ./server_pid
+          fi
+
+          # Clean up cloned Player web app
+          rm -rf ./player-app 2>/dev/null || true
 
           # Clean up downloaded files
           echo "Cleaning downloaded files..."
